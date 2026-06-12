@@ -17,10 +17,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # site is placed at the branch root AND in docs/ so it works with
+      # either "/" or "/docs" selected as the Pages source folder;
+      # .nojekyll skips the Jekyll build entirely
+      - name: Prepare site
+        run: |
+          mkdir -p out/docs
+          cp index.html styles.css shatter.js README.md .nojekyll out/
+          cp index.html styles.css shatter.js .nojekyll out/docs/
       - name: Publish to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
+          publish_dir: ./out
           publish_branch: gh-pages
-          exclude_assets: '.github'
