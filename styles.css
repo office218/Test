@@ -388,6 +388,15 @@ body {
 .crack-svg.bright path:not(.glow) { stroke: rgba(255, 255, 255, .98); }
 .crack-svg.gone { opacity: 0; transition: opacity .16s ease-out; }
 
+.crack-svg .frost { opacity: 0; }
+.crack-svg.s1 .frost { opacity: 1; transition: opacity .18s ease-out; }
+.crack-svg .glint { fill: #fff; opacity: 0; }
+.crack-svg.s2 .glint {
+  opacity: .95;
+  transition: opacity .1s ease-out;
+  filter: drop-shadow(0 0 2px rgba(220, 248, 255, .9));
+}
+
 /* ---------- shards / fx layers ---------- */
 
 .shard-layer {
@@ -403,21 +412,53 @@ body {
   position: absolute !important;
   margin: 0 !important;
   will-change: transform, opacity;
-  filter: drop-shadow(0 0 2.5px rgba(185, 242, 255, .75)) brightness(1.12);
+  filter: brightness(1.06);
+}
+.shard .shard-tint {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(155deg,
+    rgba(215, 245, 255, .17) 0%,
+    rgba(160, 225, 250, .04) 45%,
+    rgba(205, 245, 255, .13) 100%);
+  mix-blend-mode: screen;
 }
 .shard .shard-glare {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background:
-    linear-gradient(var(--ga, 120deg),
-      transparent 26%,
-      rgba(238, 252, 255, .75) 48%,
-      rgba(190, 240, 252, .25) 56%,
-      transparent 74%),
-    linear-gradient(200deg, rgba(160, 225, 245, .12), transparent 55%);
+  /* faint iridescence in the sweep — pale warm/cool fringes around the
+     white specular core, like light splitting in real glass */
+  background: linear-gradient(var(--ga, 120deg),
+    transparent 24%,
+    rgba(255, 235, 250, .16) 40%,
+    rgba(244, 254, 255, .9) 49%,
+    rgba(190, 238, 255, .32) 56%,
+    rgba(255, 246, 225, .10) 64%,
+    transparent 78%);
   mix-blend-mode: screen;
-  opacity: .12;
+  opacity: .1;
+}
+.shard .shard-edge {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+.shard .shard-edge .eg {
+  fill: none;
+  stroke: rgba(165, 232, 255, .35);
+  stroke-width: 2.6;
+  stroke-linejoin: bevel;
+}
+.shard .shard-edge .ec {
+  fill: rgba(205, 242, 255, .05);
+  stroke: rgba(255, 255, 255, .85);
+  stroke-width: 1;
+  stroke-linejoin: bevel;
 }
 
 .fx-canvas {
