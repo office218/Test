@@ -159,6 +159,25 @@
     return points.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
   }
 
+  /* subdivide segments with perpendicular jitter — hairline jaggedness
+     that straight SVG lines lack */
+  function jag(points, amp) {
+    const out = [points[0]];
+    for (let i = 1; i < points.length; i++) {
+      const a = points[i - 1], b = points[i];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const n = len > 90 ? 3 : len > 40 ? 2 : 1;
+      for (let k = 1; k < n; k++) {
+        const t = k / n;
+        const j = amp * len * rand(-1, 1);
+        out.push({ x: a.x + dx * t - (dy / len) * j, y: a.y + dy * t + (dx / len) * j });
+      }
+      out.push(b);
+    }
+    return out;
+  }
+
   function buildCrackSvg(pattern, w, h, offX, offY) {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("class", "crack-svg");
@@ -168,26 +187,52 @@
     svg.style.width = w + "px";
     svg.style.height = h + "px";
 
-    const add = (d, stage, glow) => {
-      const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    const NS = "http://www.w3.org/2000/svg";
+    const add = (d, stage, glow, wMin, wMax) => {
+      const p = document.createElementNS(NS, "path");
       p.setAttribute("d", d);
       p.setAttribute("pathLength", "1");
       p.setAttribute("class", stage + (glow ? " glow" : ""));
       p.style.transitionDelay = rand(0, 0.06).toFixed(3) + "s";
       if (!glow) {
-        p.style.strokeWidth = rand(0.7, 1.4).toFixed(2);
-        p.style.strokeOpacity = rand(0.5, 0.95).toFixed(2);
+        p.style.strokeWidth = rand(wMin || 0.5, wMax || 1.2).toFixed(2);
+        p.style.strokeOpacity = rand(0.55, 1).toFixed(2);
       }
       svg.appendChild(p);
     };
 
     const { verts, impact, spokes } = pattern;
+
+    // frosted crush zone right at the impact point
+    svg.innerHTML =
+      `<defs><radialGradient id="frostG"><stop offset="0%" stop-color="rgba(240,252,255,.55)"/>` +
+      `<stop offset="45%" stop-color="rgba(200,240,255,.18)"/>` +
+      `<stop offset="100%" stop-color="rgba(200,240,255,0)"/></radialGradient></defs>` +
+      `<circle class="frost" cx="${impact.x.toFixed(1)}" cy="${impact.y.toFixed(1)}" r="30" fill="url(#frostG)"/>`;
+    // dense micro-fractures around the crush zone
+    for (let i = 0; i < 22; i++) {
+      const a = rand(0, TAU), r0 = rand(2, 9), r1 = r0 + rand(5, 22);
+      const d = pathD(jag([
+        { x: impact.x + Math.cos(a) * r0, y: impact.y + Math.sin(a) * r0 },
+        { x: impact.x + Math.cos(a) * r1, y: impact.y + Math.sin(a) * r1 },
+      ], 0.12));
+      add(d, "st1", false, 0.4, 0.8);
+    }
+
     // radial cracks dominate: every spoke runs from the impact to the edge
     for (let i = 0; i < spokes; i++) {
-      const d1 = pathD([impact, verts[0][i], verts[1][i]]);
+      const d1 = pathD(jag([impact, verts[0][i], verts[1][i]], 0.045));
       add(d1, "st1", true); add(d1, "st1", false);
-      const d2 = pathD([verts[1][i], verts[2][i], verts[3][i], verts[4][i]]);
+      const d2 = pathD(jag([verts[1][i], verts[2][i], verts[3][i], verts[4][i]], 0.04));
       add(d2, "st2", true); add(d2, "st2", false);
+      // short secondary forks branching off the spoke
+      if (Math.random() < 0.75) {
+        const v = verts[1 + Math.floor(rand(0, 2))][i];
+        const a0 = Math.atan2(v.y - impact.y, v.x - impact.x) + rand(0.45, 0.95) * (Math.random() < 0.5 ? -1 : 1);
+        const len = rand(22, 60);
+        const d = pathD(jag([v, { x: v.x + Math.cos(a0) * len, y: v.y + Math.sin(a0) * len }], 0.1));
+        add(d, "st2", false, 0.4, 0.8);
+      }
     }
     // concentric cracks are partial arcs — real glass never forms full rings
     const ringDefs = [
@@ -199,8 +244,22 @@
     for (const { r, stage: st, p } of ringDefs) {
       for (let i = 0; i < spokes; i++) {
         if (Math.random() > p) continue;
-        const d = pathD([verts[r][i], verts[r][(i + 1) % spokes]]);
+        const d = pathD(jag([verts[r][i], verts[r][(i + 1) % spokes]], 0.06));
         add(d, st, true); add(d, st, false);
+      }
+    }
+    // sparkle glints where cracks intersect
+    for (let r = 0; r < 3; r++) {
+      for (let i = 0; i < spokes; i++) {
+        if (Math.random() > 0.3) continue;
+        const v = verts[r][i];
+        const c = document.createElementNS(NS, "circle");
+        c.setAttribute("class", "glint");
+        c.setAttribute("cx", v.x.toFixed(1));
+        c.setAttribute("cy", v.y.toFixed(1));
+        c.setAttribute("r", rand(0.8, 1.6).toFixed(1));
+        c.style.transitionDelay = rand(0, 0.15).toFixed(2) + "s";
+        svg.appendChild(c);
       }
     }
     return svg;
@@ -251,12 +310,29 @@
       content.style.height = h + "px";
       content.style.margin = "0";
       content.style.visibility = "visible";
+      content.style.opacity = "0.92"; // glass is never fully opaque
       el.appendChild(content);
+
+      // cool translucent body tint so the fragment reads as crystal
+      const tint = document.createElement("div");
+      tint.className = "shard-tint";
+      el.appendChild(tint);
 
       const glare = document.createElement("div");
       glare.className = "shard-glare";
       glare.style.setProperty("--ga", Math.round(rand(80, 160)) + "deg");
       el.appendChild(glare);
+
+      // bright specular line along the actual fracture edges —
+      // the single strongest cue that a fragment is glass
+      const edge = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      edge.setAttribute("class", "shard-edge");
+      edge.setAttribute("viewBox", `0 0 ${bw} ${bh}`);
+      const pts = poly.map((p) => `${(p.x - bx).toFixed(1)},${(p.y - by).toFixed(1)}`).join(" ");
+      edge.innerHTML =
+        `<polygon points="${pts}" class="eg"/>` +
+        `<polygon points="${pts}" class="ec"/>`;
+      el.appendChild(edge);
       shardLayer.appendChild(el);
 
       // outward velocity from the impact point; closer shards get more energy
@@ -417,9 +493,11 @@
           }
         }
 
-        // glass glint: specular highlight depends on shard orientation
-        const g = Math.abs(Math.sin(s.rx + s.glintAng) * Math.cos(s.ry));
-        s.glare.style.opacity = (0.25 + 0.6 * g).toFixed(3);
+        // peaky specular: mostly dim with sudden bright prismatic flashes,
+        // the way real glass catches light while tumbling
+        const raw = Math.abs(Math.sin(s.rx + s.glintAng) * Math.cos(s.ry));
+        const g = Math.pow(raw, 2.6);
+        s.glare.style.opacity = Math.min(1, 0.1 + 1.05 * g).toFixed(3);
 
         // fade after settling, or force-fade at end of life
         const fadeStart = s.settledAt ? s.settledAt + 650 : shatterAt + SHARD_LIFE;
