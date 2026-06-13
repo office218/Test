@@ -1,0 +1,185 @@
+/* ============================================================
+   Shatter effect — styles for the drop-in module
+   All class names are prefixed shfx- to avoid collisions with
+   the site's existing styles.
+   ============================================================ */
+
+/* pre-impact micro tremble on the problem box */
+@keyframes shfx-tremble {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(.7px, -.4px); }
+  40% { transform: translate(-.6px, .5px); }
+  60% { transform: translate(.5px, .4px); }
+  80% { transform: translate(-.5px, -.5px); }
+}
+.shfx-tremble { animation: shfx-tremble .11s linear infinite; }
+
+/* ---------- crack overlay ---------- */
+
+.shfx-crack {
+  position: absolute;
+  z-index: 7;
+  pointer-events: none;
+  overflow: hidden;
+}
+.shfx-crack path {
+  fill: none;
+  stroke: rgba(226, 234, 238, .6);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.shfx-crack path.glow {
+  stroke: rgba(195, 212, 220, .12);
+  stroke-width: 3.6;
+}
+.shfx-crack.s1 path.st1 { transition: stroke-dashoffset .13s ease-out; stroke-dashoffset: 0; }
+.shfx-crack.s2 path.st2 { transition: stroke-dashoffset .17s ease-out; stroke-dashoffset: 0; }
+.shfx-crack.bright path:not(.glow) { stroke: rgba(248, 250, 252, .85); }
+.shfx-crack.gone { opacity: 0; transition: opacity .16s ease-out; }
+
+/* ---------- pieces / FX layers ---------- */
+
+.shfx-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  perspective: 1150px;
+  transform-style: preserve-3d;
+}
+
+.shfx-shard {
+  position: absolute !important;
+  margin: 0 !important;
+  will-change: transform, opacity;
+}
+.shfx-shard .shfx-edge {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+/* faint edge line — keeps pieces readable against a dark background */
+.shfx-shard .shfx-edge polygon {
+  fill: none;
+  stroke: rgba(255, 255, 255, .22);
+  stroke-width: 1;
+  stroke-linejoin: bevel;
+}
+
+.shfx-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+}
+
+.shfx-flash {
+  position: absolute;
+  z-index: 9;
+  width: 300px;
+  height: 300px;
+  pointer-events: none;
+  background: radial-gradient(circle,
+    rgba(235, 253, 255, .95) 0%,
+    rgba(170, 238, 250, .42) 28%,
+    transparent 62%);
+  transform: translate(-50%, -50%) scale(.3);
+  opacity: 0;
+}
+
+.shfx-floor {
+  position: absolute;
+  left: 50%;
+  bottom: 26px;
+  width: min(880px, 92vw);
+  height: 60px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: radial-gradient(50% 100% at 50% 100%, rgba(150, 230, 250, .22), transparent 75%);
+  opacity: 0;
+  transition: opacity .3s ease-out;
+}
+.shfx-floor.lit { opacity: 1; }
+
+/* ---------- solution box entrance ---------- */
+
+/* applied by the module to your existing solution box on init */
+.shfx-solution {
+  position: relative;
+  overflow: hidden;
+  opacity: 0;
+  transform: scale(1.13) translateY(14px);
+  filter: blur(16px) brightness(1.9) saturate(1.4);
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.shfx-solution.shfx-enter {
+  visibility: visible;
+  pointer-events: auto;
+  opacity: 1;
+  transform: none;
+  filter: blur(0) brightness(1) saturate(1);
+  transition:
+    opacity .42s ease-out,
+    transform .62s cubic-bezier(.16, 1.1, .26, 1),
+    filter .55s cubic-bezier(.2, .8, .3, 1);
+}
+
+/* mirror-shine sweep across the new box */
+.shfx-solution::after {
+  content: "";
+  position: absolute;
+  inset: -40px;
+  pointer-events: none;
+  background: linear-gradient(115deg,
+    transparent 38%,
+    rgba(255, 255, 255, .07) 46%,
+    rgba(210, 255, 255, .30) 50%,
+    rgba(255, 255, 255, .07) 54%,
+    transparent 62%);
+  transform: translateX(-130%) skewX(-8deg);
+  opacity: 0;
+}
+.shfx-solution.shfx-shine::after {
+  opacity: 1;
+  animation: shfx-shine-sweep .95s cubic-bezier(.3, .1, .2, 1) forwards;
+}
+@keyframes shfx-shine-sweep {
+  to { transform: translateX(130%) skewX(-8deg); opacity: 0; }
+}
+
+/* optional: staggered reveal — add class shfx-sol-item to the rows
+   inside your solution box if you want them to slide in one by one */
+.shfx-sol-item {
+  opacity: 0;
+  transform: translateX(-16px);
+}
+.shfx-solution.shfx-enter .shfx-sol-item {
+  opacity: 1;
+  transform: none;
+  transition: opacity .4s ease-out, transform .45s cubic-bezier(.18, .9, .3, 1);
+}
+.shfx-solution.shfx-enter .shfx-sol-item:nth-child(1) { transition-delay: .28s; }
+.shfx-solution.shfx-enter .shfx-sol-item:nth-child(2) { transition-delay: .38s; }
+.shfx-solution.shfx-enter .shfx-sol-item:nth-child(3) { transition-delay: .48s; }
+.shfx-solution.shfx-enter .shfx-sol-item:nth-child(4) { transition-delay: .58s; }
+.shfx-solution.shfx-enter .shfx-sol-item:nth-child(5) { transition-delay: .70s; }
+
+/* ---------- reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .shfx-tremble { animation: none; }
+  .shfx-solution.shfx-enter,
+  .shfx-solution.shfx-enter .shfx-sol-item {
+    transition-duration: .01s !important;
+    transition-delay: 0s !important;
+  }
+  .shfx-solution.shfx-shine::after { animation: none; }
+}
